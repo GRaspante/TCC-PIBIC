@@ -155,7 +155,7 @@ end component;
 	signal writes_done : std_logic;	
     type BYTE_FIFO_TYPE is array (0 to (NUMBER_OF_INPUT_WORDS-1)) of std_logic_vector((C_S_AXIS_TDATA_WIDTH-1)downto 0);
     signal stream_data_fifo	:  BYTE_FIFO_TYPE;
-    
+    signal S_AXIS_TLAST_DELAY: std_logic;    
     -- CNN
     signal sreset_conv4, sready_conv4 : std_logic;
     signal s_samples_conv4 : in_Conv4;
@@ -349,7 +349,14 @@ begin
 	-- The example design sink is always ready to accept the S_AXIS_TDATA  until
 	-- the FIFO is not filled with NUMBER_OF_INPUT_WORDS number of input words.
 	axis_tready <= '1' when ((mst_exec_state_slave = WRITE_FIFO) and (write_pointer <= NUMBER_OF_INPUT_WORDS-1)) else '0';
-
+    
+    process(S_AXIS_ACLK)
+    begin
+        if (rising_edge (S_AXIS_ACLK)) then
+          S_AXIS_TLAST_DELAY <= S_AXIS_TLAST;  
+        end if;
+    end process;
+    
 	process(S_AXIS_ACLK)
 	begin
 	  if (rising_edge (S_AXIS_ACLK)) then
@@ -377,7 +384,7 @@ begin
 	        if ((write_pointer = NUMBER_OF_INPUT_WORDS-1) or S_AXIS_TLAST = '1') then
 	          -- reads_done is asserted when NUMBER_OF_INPUT_WORDS numbers of streaming data 
 	          -- has been written to the FIFO which is also marked by S_AXIS_TLAST(kept for optional usage).
-	          writes_done <= '1';
+	          writes_done <= '1';	          
 	        end if;
 	      end  if;
 	    end if;
@@ -403,7 +410,7 @@ begin
 	
     CONV4: cnn_conv4b port map (    reset_conv4       => sreset_conv4,
                                     clk               => M_AXIS_ACLK,
-                                    start_conv4       => writes_done,
+                                    start_conv4       => S_AXIS_TLAST_DELAY,
                                     ready_conv4       => sready_conv4,
                                     samples_conv4     => s_samples_conv4,        
                                     output_conv4      => soutput_conv4);
