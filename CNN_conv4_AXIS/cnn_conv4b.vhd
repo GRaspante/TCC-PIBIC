@@ -63,7 +63,7 @@ end component;
 --signal sfilter_conv4 : filter4 := fourthConvfilter; 
 --signal sbias_conv4 : biasConv := fourthConvBias;
 signal soutput_conv4 : out_Conv2;
-
+signal start_conv4_delay : std_logic;
 signal s_sample_adjusted_aux : aux_filter4;
 signal sfilter_aux : aux_filter4;     
 signal sconv4_Bias, soutput_final : std_logic_vector (FP_WIDTH-1 downto 0);
@@ -106,7 +106,7 @@ begin
     if rising_edge(clk) then
         case estado_atual is
         when inicio =>
-            if start_conv4 = '1' then            
+            if (start_conv4 or start_conv4_delay) = '1' then            
                 proximo_estado <= atualiza_entradas;
             else
                 proximo_estado <= inicio;
@@ -131,7 +131,7 @@ begin
             end if;
             
         when fim =>            
-            proximo_estado <= fim;
+            proximo_estado <= inicio;
            
         when others =>
             proximo_estado <= inicio;
@@ -155,8 +155,9 @@ variable count1 : std_logic_vector(1 downto 0);
                 k <= 29;
                 done <= '0';
                 sready_conv4 <= '0';
+                start_conv4_delay <= start_conv4;
                 
-            when atualiza_entradas => -- ESTADO QUE ATUALIZA AS ENTRADAS DA CONVOLU«√O
+            when atualiza_entradas => -- ESTADO QUE ATUALIZA AS ENTRADAS DA CONVOLU√á√ÉO
                 s_sample_adjusted_aux(i) <= samples_conv4(i,k);
                 sfilter_aux(i) <= fourthConvfilter(l,i);
                 sconv4_Bias <= fourthConvBias(l);
@@ -196,7 +197,7 @@ variable count1 : std_logic_vector(1 downto 0);
                     count := std_logic_vector(unsigned(count)+1);
                 end if;
            
-            when fim => -- ESTADO FIM COM A CONVOLU«√O COMPLETA E REGISTRO COMPLETOS Ns_start <= '0';
+            when fim => -- ESTADO FIM COM A CONVOLU√á√ÉO COMPLETA E REGISTRO COMPLETOS Ns_start <= '0';
                 s_startloop <= '0';
                 sready_conv4 <= '1';                
                -- output_loopb <=  s_output_loopb;
