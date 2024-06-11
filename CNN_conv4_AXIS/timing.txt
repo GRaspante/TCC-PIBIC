@@ -1,0 +1,3 @@
+9.6us - dps que svalid e sready = 1
+3.14885ms - dps que terminou o slave até readyconv4 = 1
+9.6us - apos mvalid = 1
