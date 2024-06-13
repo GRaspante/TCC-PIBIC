@@ -118,11 +118,11 @@ end component;
 	--wait counter. The master waits for the user defined number of clock cycles before initiating a transfer.
 --	signal count	: std_logic_vector(WAIT_COUNT_BITS-1 downto 0);
 	--streaming data valid
-	--signal axis_tvalid	: std_logic;
+    signal axis_tvalid	: std_logic;
 	--streaming data valid delayed by one clock cycle
 	signal axis_tvalid_delay	: std_logic;
 	--Last of the streaming data 
-	--signal axis_tlast	: std_logic;
+	signal axis_tlast	: std_logic;
 	--Last of the streaming data delayed by one clock cycle
 	signal axis_tlast_delay	: std_logic;
 	--FIFO implementation signals
@@ -230,12 +230,12 @@ begin
     --tvalid generation
 	--axis_tvalid is asserted when the control state machine's state is SEND_STREAM and
 	--number of output streaming data is less than the NUMBER_OF_OUTPUT_WORDS.
---	axis_tvalid <= '1' when ((mst_exec_state = SEND_STREAM) and (read_pointer < NUMBER_OF_OUTPUT_WORDS)) else '0';
+	axis_tvalid <= '1' when ((mst_exec_state = SEND_STREAM) and (read_pointer < NUMBER_OF_OUTPUT_WORDS) and (fifo_wren = '0')) else '0';
 	                                                                                               
 	-- AXI tlast generation                                                                        
 	-- axis_tlast is asserted number of output streaming data is NUMBER_OF_OUTPUT_WORDS-1          
 	-- (0 to NUMBER_OF_OUTPUT_WORDS-1)                                                             
---	axis_tlast <= '1' when (read_pointer = NUMBER_OF_OUTPUT_WORDS-1) else '0';                                                                                             
+	axis_tlast <= '1' when ((read_pointer = NUMBER_OF_OUTPUT_WORDS-1) and (fifo_wren = '0')) else '0';                                                                                             
 	-- Delay the axis_tvalid and axis_tlast signal by one clock cycle                              
 	-- to match the latency of M_AXIS_TDATA                                                        
 	process(M_AXIS_ACLK)                                                                           
@@ -246,9 +246,9 @@ begin
 	      axis_tlast_delay <= '0';     
 	      sready_conv4_delay <= '0';                                                            
 	    else  
-	      if (sready_conv4 = '1') then
-	           sready_conv4_delay <= '1';   
-	      end if;                                                      
+          axis_tvalid_delay <= axis_tvalid;                                                                
+	      axis_tlast_delay <= axis_tlast;       
+	      sready_conv4_delay <= sready_conv4;	         
 	    end if;                                                                                    
 	  end if;                                                                                      
 	end process;                                                                                   
@@ -267,14 +267,12 @@ begin
 	        if (tx_en = '1') then                                                    
 	          -- read pointer is incremented after every read from the FIFO          
 	          -- when FIFO read signal is enabled.   
-	          axis_tvalid_delay <= '1';
 	          if l=0 and k>0 then
                     l <= 29;
                     k <= k-1;            
                 elsif l=0 and k=0 then
                     l <= 29;
                     k <= 31;
-                    axis_tlast_delay <= '1';
                 else
                     k <= k;            
                     l <= l-1;  
@@ -285,10 +283,7 @@ begin
 	      elsif (read_pointer = NUMBER_OF_OUTPUT_WORDS) then                         
 	        -- tx_done is asserted when NUMBER_OF_OUTPUT_WORDS numbers of streaming data
 	        -- has been out.                                                         
-	        tx_done <= '1'; 
-	        axis_tvalid_delay <= '0';   
-	        axis_tlast_delay <= '0'; 
-	        sready_conv4_delay <= '0';                                                     
+	        tx_done <= '1';                                                   
 	      end  if;                                                                   
 	    end  if;                                                                     
 	  end  if;                                                                       
@@ -297,7 +292,7 @@ begin
 
 	--FIFO read enable generation 
 
-	tx_en <= M_AXIS_TREADY and sready_conv4_delay;                                   
+	tx_en <= M_AXIS_TREADY and axis_tvalid;                                   
 	                                                                                
 	-- FIFO Implementation                                                          
 	                                                                                
@@ -409,8 +404,6 @@ begin
 	  begin
 	    if (rising_edge (S_AXIS_ACLK)) then
 	      if (fifo_wren = '1') then
-	        axis_tvalid_delay <= '0';   
-            axis_tlast_delay <= '0';
 	        s_samples_conv4(i, j) <= S_AXIS_TDATA(31 downto 5);
 	      end if;  
 	    end  if;
