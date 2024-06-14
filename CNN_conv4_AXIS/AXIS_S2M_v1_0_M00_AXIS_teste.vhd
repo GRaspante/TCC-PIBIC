@@ -105,8 +105,7 @@ end component;
 	-- The control state machine oversees the writing of input streaming data to the FIFO,
 	-- and outputs the streaming data from the FIFO                                   
 	type state is ( IDLE,        -- This is the initial/idle state                    
-	                INIT_RECEIVE,  -- ESTADO QUE ESPERA O SLAVE RECEBER         
-	                                -- TODAS AS AMOSTRAS
+	               -- INIT_RECEIVE, 
 	                SEND_STREAM);  -- In this state the                               
 	                             -- stream data is output through M_AXIS_TDATA        
 	-- State variable                                                                 
@@ -193,8 +192,8 @@ begin
 	          -- there tvalid is asserted to mark the                                           
 	          -- presence of valid streaming data                                               
 	          --if (count = "0")then                                                            
-	          if (writes_done = '1')then
-	            mst_exec_state <= INIT_RECEIVE;
+	          if (sready_conv4_delay = '1')then
+	            mst_exec_state <= SEND_STREAM;
 	          else
 	            mst_exec_state <= IDLE;
 	          end if;                                                 
@@ -202,13 +201,13 @@ begin
 	          --  mst_exec_state <= IDLE;                                                         
 	          --end if;                                                                           
 	                                                                                            
-	          when INIT_RECEIVE =>                                                              
-	            -- ESPERA A CNN
-	            if (sready_conv4_delay = '1') then
-	              mst_exec_state  <= SEND_STREAM;                                               
-	            else                   
-	              mst_exec_state  <= INIT_RECEIVE;                                              
-	            end if;                                                                         
+--	          when INIT_RECEIVE =>                                                              
+--	            -- ESPERA A CNN
+--	            if (sready_conv4_delay = '1') then
+--	              mst_exec_state  <= SEND_STREAM;                                               
+--	            else                   
+--	              mst_exec_state  <= INIT_RECEIVE;                                              
+--	            end if;                                                                         
 	                                                                                            
 	        when SEND_STREAM  =>                                                                
 	          -- The example design streaming master functionality starts                       
