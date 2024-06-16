@@ -175,7 +175,7 @@ begin
 	M_AXIS_TDATA	<= stream_data_out;
 	M_AXIS_TLAST	<= axis_tlast_delay;
 	M_AXIS_TSTRB	<= (others => '1');
-    INTR_CONV4      <= sready_conv4_delay;
+    INTR_CONV4      <= tx_done;
 
 	-- Control state machine implementation                                               
 	process(M_AXIS_ACLK)                                                                        
@@ -229,12 +229,12 @@ begin
     --tvalid generation
 	--axis_tvalid is asserted when the control state machine's state is SEND_STREAM and
 	--number of output streaming data is less than the NUMBER_OF_OUTPUT_WORDS.
-	axis_tvalid <= '1' when ((mst_exec_state = SEND_STREAM) and (read_pointer < NUMBER_OF_OUTPUT_WORDS) and (fifo_wren = '0')) else '0';
+	axis_tvalid <= '1' when (mst_exec_state = SEND_STREAM) else '0';
 	                                                                                               
 	-- AXI tlast generation                                                                        
 	-- axis_tlast is asserted number of output streaming data is NUMBER_OF_OUTPUT_WORDS-1          
 	-- (0 to NUMBER_OF_OUTPUT_WORDS-1)                                                             
-	axis_tlast <= '1' when ((read_pointer = NUMBER_OF_OUTPUT_WORDS-1) and (fifo_wren = '0')) else '0';                                                                                             
+	axis_tlast <= '1' when ((l=0 and k=0) and (mst_exec_state = SEND_STREAM)) else '0';                                                                                             
 	-- Delay the axis_tvalid and axis_tlast signal by one clock cycle                              
 	-- to match the latency of M_AXIS_TDATA                                                        
 	process(M_AXIS_ACLK)                                                                           
@@ -268,21 +268,23 @@ begin
 	          -- when FIFO read signal is enabled.   
 	          if l=0 and k>0 then
                     l <= 29;
-                    k <= k-1;            
-                elsif l=0 and k=0 then
-                    l <= 29;
-                    k <= 31;
+                    k <= k-1;    
+                    tx_done <= '0';        
+                elsif l<=1 and k=0 then
+                    l <= 0;
+                    k <= 0;
+                    tx_done <= '1';
                 else
                     k <= k;            
                     l <= l-1;  
+                    tx_done <= '0';
                 end if;                                
-	          read_pointer <= read_pointer + 1;                                      
-	          tx_done <= '0';                                                        
+	          read_pointer <= read_pointer + 1;                       
 	        end if;                                                                  
-	      elsif (read_pointer = NUMBER_OF_OUTPUT_WORDS) then                         
-	        -- tx_done is asserted when NUMBER_OF_OUTPUT_WORDS numbers of streaming data
-	        -- has been out.                                                         
-	        tx_done <= '1';                                                   
+--	      elsif ((read_pointer = NUMBER_OF_OUTPUT_WORDS) or (l=0 and k=0)) then                         
+--	        -- tx_done is asserted when NUMBER_OF_OUTPUT_WORDS numbers of streaming data
+--	        -- has been out.                                                         
+--	        tx_done <= '1';                                                   
 	      end  if;                                                                   
 	    end  if;                                                                     
 	  end  if;                                                                       
@@ -291,7 +293,7 @@ begin
 
 	--FIFO read enable generation 
 
-	tx_en <= M_AXIS_TREADY and axis_tvalid;                                   
+	tx_en <= M_AXIS_TREADY and axis_tvalid_delay;                                   
 	                                                                                
 	-- FIFO Implementation                                                          
 	                                                                                
