@@ -19,7 +19,7 @@ entity AXIS_S2M_v1_0 is
 	);
 	port (
 		-- Users to add ports here
-
+        intr_conv4      : out std_logic;
 		-- User ports ends
 		-- Do not modify the ports beyond this line
 
@@ -61,6 +61,7 @@ component AXIS_S2M_v1_0_M00_AXIS is
 		M_AXIS_TSTRB	: out std_logic_vector((C_M_AXIS_TDATA_WIDTH/8)-1 downto 0);
 		M_AXIS_TLAST	: out std_logic;
 		M_AXIS_TREADY	: in std_logic;
+		INTR_CONV4      : out std_logic;
 		S_AXIS_ACLK	: in std_logic;
 		S_AXIS_ARESETN	: in std_logic;
 		S_AXIS_TREADY	: out std_logic;
@@ -89,6 +90,7 @@ AXIS_S2M_v1_0_M00_AXIS_inst : AXIS_S2M_v1_0_M00_AXIS
 		M_AXIS_TLAST	=> m00_axis_tlast,
 		M_AXIS_TREADY	=> m00_axis_tready,
 		S_AXIS_ACLK	=> s00_axis_aclk,
+		INTR_CONV4 => intr_conv4,
 		S_AXIS_ARESETN	=> s00_axis_aresetn,
 		S_AXIS_TREADY	=> s00_axis_tready,
 		S_AXIS_TDATA	=> s00_axis_tdata,
