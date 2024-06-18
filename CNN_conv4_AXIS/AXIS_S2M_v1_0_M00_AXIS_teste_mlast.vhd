@@ -192,7 +192,7 @@ begin
 	          -- there tvalid is asserted to mark the                                           
 	          -- presence of valid streaming data                                               
 	          --if (count = "0")then                                                            
-	          if (sready_conv4_delay = '1') then
+	          if ((sready_conv4_delay = '1') and (tx_done = '0'))then
 	            mst_exec_state <= SEND_STREAM;
 	          else
 	            mst_exec_state <= IDLE;
@@ -266,18 +266,16 @@ begin
 	        if (tx_en = '1') then                                                    
 	          -- read pointer is incremented after every read from the FIFO          
 	          -- when FIFO read signal is enabled.   
-	          if l=0 and k>0 then
+                if l=0 and k>0 then
                     l <= 29;
-                    k <= k-1;    
-                    tx_done <= '0';        
-                elsif l=0 and k=0 then
-                    l <= 29;
-                    k <= 31;
+                    k <= k-1; 
+                elsif l<=1 and k=0 then
+                    l <= 0;
+                    k <= 0;
                     tx_done <= '1';
                 else
                     k <= k;            
                     l <= l-1;  
-                    tx_done <= '0';
                 end if;                                
 	          read_pointer <= read_pointer + 1;                       
 	        end if;                                                                  
@@ -293,7 +291,7 @@ begin
 
 	--FIFO read enable generation 
 
-	tx_en <= M_AXIS_TREADY and axis_tvalid_delay;                                   
+	tx_en <= M_AXIS_TREADY and axis_tvalid;                                   
 	                                                                                
 	-- FIFO Implementation                                                          
 	                                                                                
