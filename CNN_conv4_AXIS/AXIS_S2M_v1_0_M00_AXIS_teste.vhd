@@ -270,7 +270,7 @@ begin
                     l <= 29;
                     k <= k-1;    
                     tx_done <= '0';        
-                elsif l<=1 and k=0 then
+                elsif l=0 and k=0 then
                     l <= 0;
                     k <= 0;
                     tx_done <= '1';
@@ -293,7 +293,7 @@ begin
 
 	--FIFO read enable generation 
 
-	tx_en <= M_AXIS_TREADY and axis_tvalid_delay;                                   
+	tx_en <= M_AXIS_TREADY and axis_tvalid;                                   
 	                                                                                
 	-- FIFO Implementation                                                          
 	                                                                                
