@@ -53,66 +53,155 @@
 #include "xil_cache.h"
 #include "xil_io.h"
 #include "conv4_file.h"
+#include "xscugic.h"
+#include "xil_exception.h"
 
+
+/*static void Conv4_Intr_Handler(void *baseaddr_p);
+static int DMA_recieve(XAxiDma *DMA);
+static int Intr_Setup(XScuGic_Config *Intr_config, XScuGic *Interrupcao);
+*/
+static int DMA_setup(XAxiDma_Config *DMA_config, XAxiDma *DMA);
+
+
+/*XScuGic_Config *Intr_config;
+XScuGic Interrupcao;
+*/
+XAxiDma_Config *DMA_config;
+XAxiDma	DMA;
 int main()
 {
-	XAxiDma_Config *DMA_config;
-	XAxiDma	DMA;
 	u32 status;
+
+/*	status = Intr_Setup(Intr_config, &Interrupcao);
+	if(status != XST_SUCCESS){
+		print("Setup INTR falhou.\n");
+		return -1;
+	}
+	print("Setup INTR.\n");
+*/
+	status = DMA_setup(DMA_config, &DMA);
+	if(status != XST_SUCCESS){
+		print("Setup DMA falhou.\n");
+		return -1;
+	}
+	print("Setup DMA....\n");
+    return 0;
+}
+
+/*static int Intr_Setup(XScuGic_Config *Intr_config, XScuGic *Interrupcao){
+	int status;
+
+	Intr_config = XScuGic_LookupConfig(XPAR_PS7_SCUGIC_0_DEVICE_ID);
+	if (NULL == Intr_config)
+			return XST_FAILURE;
+
+	status = XScuGic_CfgInitialize(Interrupcao, Intr_config, Intr_config -> CpuBaseAddress);
+		    if(status != XST_SUCCESS)
+		        return XST_FAILURE;
+
+	XScuGic_SetPriorityTriggerType(Interrupcao, XPAR_FABRIC_AXIS_S2M_0_INTR_CONV4_INTR, 0xA0, 0x3);
+
+	status = XScuGic_Connect(Interrupcao, XPAR_FABRIC_AXIS_S2M_0_INTR_CONV4_INTR,
+				(Xil_ExceptionHandler) Conv4_Intr_Handler, (void *) &DMA);
+	    if(status != XST_SUCCESS)
+	          return XST_FAILURE;
+
+	XScuGic_Enable(Interrupcao, XPAR_FABRIC_AXIS_S2M_0_INTR_CONV4_INTR);
+
+	Xil_ExceptionInit();
+	Xil_ExceptionRegisterHandler(XIL_EXCEPTION_ID_INT, (Xil_ExceptionHandler)XScuGic_InterruptHandler, Interrupcao);
+	Xil_ExceptionEnable();
+
+	return XST_SUCCESS;
+}*/
+
+static int DMA_setup(XAxiDma_Config *DMA_config, XAxiDma *DMA){
+	int status;
 	float in_data[conv4_input_length];
 	float out_data[conv4_input_length];
+	u32 teste = (u32)out_data;
 
 	for (int i = 0; i < conv4_input_length; i++){
 		in_data[i] = conv4_input[i];
 	}
 
 	DMA_config = XAxiDma_LookupConfigBaseAddr(XPAR_AXI_DMA_0_BASEADDR);
-	status = XAxiDma_CfgInitialize(&DMA, DMA_config);
 
+	status = XAxiDma_CfgInitialize(DMA, DMA_config);
 	if(status != XST_SUCCESS){
 		print("Inicializacao DMA falhou.\n");
 		return -1;
 	}
 	print("Inicializacao DMA.\n");
 
+	XAxiDma_IntrDisable(DMA, XAXIDMA_IRQ_ALL_MASK,	XAXIDMA_DEVICE_TO_DMA);
+	xil_printf("sem intr do DMA\r\n");
+	XAxiDma_IntrDisable(DMA, XAXIDMA_IRQ_ALL_MASK,	XAXIDMA_DMA_TO_DEVICE);
 
-	XAxiDma_IntrDisable(&DMA, XAXIDMA_IRQ_ALL_MASK,	XAXIDMA_DEVICE_TO_DMA);
-	xil_printf("sem intr \r\n");
-	XAxiDma_IntrDisable(&DMA, XAXIDMA_IRQ_ALL_MASK,	XAXIDMA_DMA_TO_DEVICE);
-
-	if(XAxiDma_HasSg(&DMA)){
+	if(XAxiDma_HasSg(DMA)){
 		xil_printf("DMA no modo SG \r\n");
 		return XST_FAILURE;
 	}
 	xil_printf("DMA no modo simples \r\n");
 
-
-
 	Xil_DCacheFlushRange((u32)in_data, 960*sizeof(float)); /*Libera os arquivos de cache*/
-	Xil_DCacheFlushRange((u32)out_data, 960*sizeof(float));
+	Xil_DCacheInvalidateRange((u32)out_data, 960*sizeof(float));
 
-	status = XAxiDma_SimpleTransfer(&DMA, (u32)in_data, 960*sizeof(float), XAXIDMA_DMA_TO_DEVICE);
+	status = XAxiDma_SimpleTransfer(DMA, (u32)out_data, 960*sizeof(float), XAXIDMA_DEVICE_TO_DMA);
+	if(status != XST_SUCCESS){
+			print("Transferencia da conv4 falhou.\n");
+			return -1;
+		}
+	status = XAxiDma_SimpleTransfer(DMA, (u32)in_data, 960*sizeof(float), XAXIDMA_DMA_TO_DEVICE);
 	if(status != XST_SUCCESS){
 			print("Transferencia para conv4 falhou.\n");
 			return -1;
 		}
+	while(XAxiDma_Busy(DMA, XAXIDMA_DMA_TO_DEVICE) || XAxiDma_Busy(DMA, XAXIDMA_DEVICE_TO_DMA));
 
-	while(XAxiDma_Busy(&DMA, XAXIDMA_DMA_TO_DEVICE)){
+	print("Transferencia conv4 finalizada.\n");
 
-	}
-	print("Transferencia para conv4 finalizada.\n");
-
-	status = XAxiDma_SimpleTransfer(&DMA, (u32)out_data, 960*sizeof(float), XAXIDMA_DEVICE_TO_DMA);
-		if(status != XST_SUCCESS){
-				print("Transferencia da conv4 falhou.\n");
-				return -1;
-			}
-
-		while(XAxiDma_Busy(&DMA, XAXIDMA_DEVICE_TO_DMA)){
-
+	/*	status = XAxiDma_SimpleTransfer(DMA, (u32)out_data, 960*sizeof(float), XAXIDMA_DEVICE_TO_DMA);
+	if(status != XST_SUCCESS){
+			print("Transferencia da conv4 falhou.\n");
+			return -1;
 		}
-		print("Transferencia da conv4 finalizada.\n");
 
+	while(XAxiDma_Busy(DMA, XAXIDMA_DEVICE_TO_DMA));
 
-    return 0;
+	print("Transferencia da conv4 finalizada...\n");*/
+
+	return XST_SUCCESS;
 }
+
+/*void Conv4_Intr_Handler(void *data){
+	u32 status;
+	xil_printf("INTR\n");
+	status = DMA_recieve(&DMA);
+	if(status != XST_SUCCESS){
+		print("Procedimento da intr nao ocorreu...\n");
+		return;
+	}
+	print("Procedimento da intr finalizado...\n");
+	return;
+}
+
+static int DMA_recieve(XAxiDma *DMA){
+	float out_data[conv4_input_length];
+	u32 status;
+
+	Xil_DCacheFlushRange((u32)out_data, 960*sizeof(float));
+
+	status = XAxiDma_SimpleTransfer(DMA, (u32)out_data, 960*sizeof(float), XAXIDMA_DEVICE_TO_DMA);
+	if(status != XST_SUCCESS){
+			print("Transferencia da conv4 falhou.\n");
+			return -1;
+		}
+
+	while(XAxiDma_Busy(DMA, XAXIDMA_DEVICE_TO_DMA));
+
+	print("Transferencia da conv4 finalizada...\n");
+
+	return XST_SUCCESS;
+}*/
