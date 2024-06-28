@@ -122,13 +122,8 @@ begin
             end if;
             
         when reg_saida =>
-            if done = '1' then
-                proximo_estado <= fim;            
-            elsif sready_soma = '1' then
-                proximo_estado <= reg_saida;
-            else
-                proximo_estado <= atualiza_entradas;        
-            end if;
+            proximo_estado <= atualiza_entradas;        
+            
             
         when fim =>            
             proximo_estado <= fim;
@@ -156,7 +151,7 @@ variable count1 : std_logic_vector(1 downto 0);
                 done <= '0';
                 sready_conv4 <= '0';
                 
-            when atualiza_entradas => -- ESTADO QUE ATUALIZA AS ENTRADAS DA CONVOLU«√O
+            when atualiza_entradas => -- ESTADO QUE ATUALIZA AS ENTRADAS DA CONVOLU√á√ÉO
                 s_sample_adjusted_aux(i) <= samples_conv4(i,k);
                 sfilter_aux(i) <= fourthConvfilter(l,i);
                 sconv4_Bias <= fourthConvBias(l);
@@ -177,26 +172,23 @@ variable count1 : std_logic_vector(1 downto 0);
                 
             when reg_saida => -- ESTADO QUE VARIA O i E j E REGISTRAS OS RESULTADOS DA CON
                 s_startloop <= '0';
-                i <= 31;
-                if count = "10" then  
-                    s_out_conv4 <= soutput_final;
-                    count := "00";
-                        if k<=0 and l>0 then
-                            k <= 29;
-                            l <= l-1;
-                        elsif k<=0 and l=0 then
-                            k <= k;
-                            l <= l;
-                            done <= '1';
-                        else
-                            k <= k-1;
-                            l <= l;
-                        end if;
+                i <= 31;                  
+                s_out_conv4 <= soutput_final;
+                count := "00";
+                if k<=0 and l>0 then
+                    k <= 29;
+                    l <= l-1;
+                elsif k<=0 and l=0 then
+                    k <= k;
+                    l <= l;
+                    done <= '1';
                 else
-                    count := std_logic_vector(unsigned(count)+1);
+                    k <= k-1;
+                    l <= l;
                 end if;
+               
            
-            when fim => -- ESTADO FIM COM A CONVOLU«√O COMPLETA E REGISTRO COMPLETOS Ns_start <= '0';
+            when fim => -- ESTADO FIM COM A CONVOLU√á√ÉO COMPLETA E REGISTRO COMPLETOS Ns_start <= '0';
                 s_startloop <= '0';
                 sready_conv4 <= '1';                
                -- output_loopb <=  s_output_loopb;
