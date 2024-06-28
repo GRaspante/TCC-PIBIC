@@ -62,7 +62,7 @@ end component;
 
 --signal sfilter_conv4 : filter4 := fourthConvfilter; 
 --signal sbias_conv4 : biasConv := fourthConvBias;
---signal soutput_conv4 : out_Conv2;
+signal soutput_conv4 : out_Conv2;
 
 signal s_sample_adjusted_aux : aux_filter4;
 signal sfilter_aux : aux_filter4;     
@@ -76,6 +76,9 @@ signal done : std_logic := '0';
 signal i : integer range 0 to (numberOfFilters-1):= numberOfFilters-1;
 signal l : integer range 0 to (numberOfFilters-1):= numberOfFilters-1;
 signal k : integer range 0 to (outConvs-1):= outConvs-1;
+
+signal m : integer range 0 to (numberOfFilters-1):= numberOfFilters-1;
+signal n : integer range 0 to (outConvs-1):= outConvs-1;
 
 TYPE estados is (inicio, atualiza_entradas, reg_saida, fim);
 signal estado_atual, proximo_estado : estados;
@@ -148,6 +151,8 @@ variable count1 : std_logic_vector(1 downto 0);
                 i <= 31; 
                 l <= 31;
                 k <= 29;
+                m <= 31;
+                n <= 29;
                 done <= '0';
                 sready_conv4 <= '0';
                 
@@ -173,7 +178,7 @@ variable count1 : std_logic_vector(1 downto 0);
             when reg_saida => -- ESTADO QUE VARIA O i E j E REGISTRAS OS RESULTADOS DA CON
                 s_startloop <= '0';
                 i <= 31;                  
-                s_out_conv4 <= soutput_final;
+                soutput_conv4(l,k) <= soutput_final;
                 count := "00";
                 if k<=0 and l>0 then
                     k <= 29;
@@ -190,7 +195,18 @@ variable count1 : std_logic_vector(1 downto 0);
            
             when fim => -- ESTADO FIM COM A CONVOLUÇÃO COMPLETA E REGISTRO COMPLETOS Ns_start <= '0';
                 s_startloop <= '0';
-                sready_conv4 <= '1';                
+                sready_conv4 <= '1';    
+                out_conv4 <= soutput_conv4(m,n);
+                if n<=0 and m>0 then
+                    n <= 29;
+                    m <= l-1;
+                elsif n<=0 and m=0 then
+                    n <= n;
+                    m <= m;
+                else
+                    n <= n-1;
+                    m <= m;
+                end if;
                -- output_loopb <=  s_output_loopb;
               
             when others => -- outros estados
@@ -200,7 +216,6 @@ end if;
 end process;
 
 ready_conv4 <= sready_conv4;
-out_conv4 <= s_out_conv4;
 
 end Behavioral;
 
