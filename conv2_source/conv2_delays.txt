@@ -1,0 +1,2 @@
+conv5sample = 80 ns;
+cnn_conv2 = 4.54 us;
