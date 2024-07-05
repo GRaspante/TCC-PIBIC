@@ -2,7 +2,7 @@
 -- Company: 
 -- Engineer: 
 -- 
--- Create Date: 18.08.2023 13:01:57
+-- Create Date: 18.08.2023 13:37:58
 -- Design Name: 
 -- Module Name: topmodule_1tb - Behavioral
 -- Project Name: 
@@ -40,19 +40,15 @@ component top_module1 is
     Port (  clk     : in std_logic;
             reset   : in std_logic;
             first_start   : in std_logic;
-            loops   : out std_logic;
-            soma    : out std_logic;
             rd_out  : out std_logic);
 end component;
 
-signal sclk, sreset, sfirst_start, sloops, s_soma, srd_out : std_logic;
+signal sclk, sreset, sfirst_start, srd_out : std_logic;
 
 begin
 uut : top_module1 port map( clk => sclk,
                             reset => sreset,
                             first_start => sfirst_start,
-                            loops  => sloops,
-                            soma  => s_soma,
                             rd_out  => srd_out);      
 clk: process
         begin
